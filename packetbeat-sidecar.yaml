@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: packetbeat-sidecar
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: packetbeat-sidecar
+  template:
+    metadata:
+      name: packetbeat-sidecar
+      labels:
+         app: packetbeat-sidecar
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: mysql-test
+        image: imega/mysql-client
+        command: ["/bin/sh", "-c"]
+        args: ["mysql --host='xxx' --user=xxx --password='xxx' --database=mysql --execute='show tables;'; sleep 6000"]
+
+      - name: packetbeat-sidecar
+        image: docker.elastic.co/beats/packetbeat:8.1.0
+        command: ["/bin/sh", "-c"]
+        args: ["/usr/share/packetbeat/packetbeat --strict.perms=false -c /etc/packetbeat/config/packetbeat.yml"]
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+        volumeMounts:
+        - name: packetbeat-config
+          mountPath: /etc/packetbeat/config
+      
+      volumes:
+      - name: packetbeat-config
+        configMap:
+          name: packetbeat-config
+          items:
+          - key: packetbeat.yml
+            path: packetbeat.yml
+
